@@ -456,6 +456,13 @@
             </div>
         </div>
 
+        <div id="security-category" class="category-section" role="region" aria-label="Security Requirements">
+            <div class="category-header">Security Requirements</div>
+            <div class="category-description">
+                Questions about administrative privileges and security requirements.
+            </div>
+        </div>
+
         <!-- Architecture Question 1 (formerly Q1) -->
         <div id="question1" class="question-container" role="region" aria-label="Question 1">
             <div class="question-number">Question 1 of 7</div>
@@ -620,6 +627,50 @@
             </div>
         </div>
 
+        <!-- Security Question 8 -->
+        <div id="question8" class="question-container hidden">
+            <div class="question-number">Question 8 of 9</div>
+            <div class="question-category">Security Requirements</div>
+            <div class="question">
+                Are administrative privileges on the server required?
+            </div>
+            <div class="explanation-box">
+                <div class="explanation-label">Explanation:</div>
+                <div class="explanation-text">Do any accounts need to belong to the Windows 'Administrators' group?</div>
+            </div>
+            <div class="options" role="radiogroup" aria-label="Answer options for question 8">
+                <div class="option yes" onclick="handleAnswer(8, true)">Yes</div>
+                <div class="option no" onclick="handleAnswer(8, false)">No</div>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton8" class="nav-button" onclick="showPreviousQuestion()">Previous</button>
+                    <button id="nextButton8" class="nav-button" onclick="showNextQuestion()">Next</button>
+                    <button id="showSummaryButton8" class="nav-button" onclick="showSummary()">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Question 9 -->
+        <div id="question9" class="question-container hidden">
+            <div class="question-number">Question 9 of 9</div>
+            <div class="question-category">Security Requirements</div>
+            <div class="question">
+                Are administrative privileges on the SQL Server instance required?
+            </div>
+            <div class="explanation-box">
+                <div class="explanation-label">Explanation:</div>
+                <div class="explanation-text">Fixed Server Roles: sysadmin, serveradmin, securityadmin, processadmin, setupadmin, bulkadmin, diskadmin, dbcreator</div>
+            </div>
+            <div class="options" role="radiogroup" aria-label="Answer options for question 9">
+                <div class="option yes" onclick="handleAnswer(9, true)">Yes</div>
+                <div class="option no" onclick="handleAnswer(9, false)">No</div>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton9" class="nav-button" onclick="showPreviousQuestion()">Previous</button>
+                    <button id="nextButton9" class="nav-button" onclick="showNextQuestion()">Next</button>
+                    <button id="showSummaryButton9" class="nav-button" onclick="showSummary()">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Summary Section -->
         <div id="summary" class="summary-section">
             <div class="summary-title">Assessment Summary</div>
@@ -655,7 +706,7 @@
 
     <script>
         let currentQuestion = 1;
-        const totalQuestions = 7;
+        const totalQuestions = 9;
         const answers = {};
         
         // Define which category each question belongs to
@@ -666,7 +717,9 @@
             4: 'storage',
             5: 'network',
             6: 'network',
-            7: 'configuration'
+            7: 'configuration',
+            8: 'security',
+            9: 'security'
         };
 
         function updateCategoryVisibility(questionNumber) {
@@ -1021,6 +1074,50 @@
                         </tr>
                     `;
                     if (answers[7] === false) hasWarnings = true;
+                } else if (i === 8) {
+                    // Question 8 - Server Admin Privileges
+                    const q8Class = answers[8] !== undefined ? (answers[8] ? 'warning' : 'success') : '';
+                    summaryHTML += `
+                        <div class="summary-item ${q8Class}">
+                            <strong>Question 8 - Are administrative privileges on the server required?</strong><br>
+                            ${answers[8] !== undefined ? 
+                                (answers[8] ? '⚠️ Administrative privileges on the server are required' : '✅ No administrative privileges on the server are required') :
+                                'Unanswered'}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>8</td>
+                            <td>Are administrative privileges on the server required?</td>
+                            <td>${answers[8] !== undefined ? (answers[8] ? '⚠️' : '✅') : '-'}</td>
+                            <td>${answers[8] !== undefined ? 
+                                (answers[8] ? 'Administrative privileges on the server are required' : 'No administrative privileges on the server are required') :
+                                'Unanswered'}</td>
+                        </tr>
+                    `;
+                    if (answers[8] === true) hasWarnings = true;
+                } else if (i === 9) {
+                    // Question 9 - SQL Server Admin Privileges
+                    const q9Class = answers[9] !== undefined ? (answers[9] ? 'warning' : 'success') : '';
+                    summaryHTML += `
+                        <div class="summary-item ${q9Class}">
+                            <strong>Question 9 - Are administrative privileges on the SQL Server instance required?</strong><br>
+                            ${answers[9] !== undefined ? 
+                                (answers[9] ? '⚠️ Administrative privileges on the SQL Server instance are required' : '✅ No administrative privileges on the SQL Server instance are required') :
+                                'Unanswered'}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>9</td>
+                            <td>Are administrative privileges on the SQL Server instance required?</td>
+                            <td>${answers[9] !== undefined ? (answers[9] ? '⚠️' : '✅') : '-'}</td>
+                            <td>${answers[9] !== undefined ? 
+                                (answers[9] ? 'Administrative privileges on the SQL Server instance are required' : 'No administrative privileges on the SQL Server instance are required') :
+                                'Unanswered'}</td>
+                        </tr>
+                    `;
+                    if (answers[9] === true) hasWarnings = true;
                 }
             }
             
@@ -1174,6 +1271,21 @@
                     resultDiv.innerHTML = `
                         <strong>Compatible with Multitenancy</strong><br>
                         Time zone flexibility allows for placement on any available multitenant instance.
+                    `;
+                }
+                document.getElementById(`showSummaryButton${questionNumber}`).style.display = 'block';
+            } else if (questionNumber === 8 || questionNumber === 9) {
+                if (answer) {
+                    resultDiv.className = 'result warning';
+                    resultDiv.innerHTML = `
+                        <strong>Further Evaluation Needed</strong><br>
+                        Administrative privileges on the server or SQL Server instance are required for a multitenant environment.
+                    `;
+                } else {
+                    resultDiv.className = 'result eligible';
+                    resultDiv.innerHTML = `
+                        <strong>Compatible with Multitenancy</strong><br>
+                        No administrative privileges on the server or SQL Server instance are required for a multitenant environment.
                     `;
                 }
                 document.getElementById(`showSummaryButton${questionNumber}`).style.display = 'block';
