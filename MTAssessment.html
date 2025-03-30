@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Server Multitenancy Assessment Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .category-section {
+            display: none;
+            margin-bottom: 30px;
+        }
+        .category-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            margin: 0 -30px 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+        }
+        .category-description {
+            color: #666;
+            font-size: 0.9em;
+            margin: -15px -30px 20px;
+            padding: 0 30px 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .question-container {
+            margin-bottom: 30px;
+            padding: 0 0 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .question-container:last-child {
+            border-bottom: none;
+        }
+        .question {
+            font-size: 1.2em;
+            color: #34495e;
+            margin-bottom: 20px;
+        }
+        .question-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+        }
+        .options {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            align-items: center;
+        }
+        .option {
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            min-width: 100px;
+            text-align: center;
+        }
+        .option.yes {
+            background-color: #fff;
+            color: #28a745;
+            border: 2px solid #28a745;
+        }
+        .option.no {
+            background-color: #fff;
+            color: #dc3545;
+            border: 2px solid #dc3545;
+        }
+        .option.yes:hover {
+            background-color: #28a745;
+            color: white;
+        }
+        .option.no:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+        .option.yes.selected {
+            background-color: #28a745;
+            color: white;
+        }
+        .option.no.selected {
+            background-color: #dc3545;
+            color: white;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .result.eligible {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .result.not-eligible {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .result.warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .hidden {
+            display: none;
+        }
+        .nav-buttons-inline {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+        .nav-button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+            font-weight: bold;
+        }
+        .nav-button:hover {
+            background-color: #2980b9;
+        }
+        .summary-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            display: none;
+        }
+        .summary-title {
+            font-size: 1.4em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .summary-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .summary-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #6c757d;
+            border: none;
+            background: none;
+            margin-right: 5px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .summary-tab.active {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+        }
+        .summary-tab:hover {
+            color: #2c3e50;
+        }
+        .summary-view {
+            display: none;
+        }
+        .summary-view.active {
+            display: block;
+        }
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .summary-table th,
+        .summary-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .summary-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .summary-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .status-icon {
+            margin-right: 5px;
+        }
+        .summary-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-left: 4px solid #3498db;
+            background-color: white;
+        }
+        .summary-item.warning {
+            border-left-color: #ffc107;
+        }
+        .summary-item.danger {
+            border-left-color: #dc3545;
+        }
+        .summary-item.success {
+            border-left-color: #28a745;
+        }
+        .final-result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .question-number {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .question-category {
+            font-size: 0.9em;
+            color: #e74c3c;
+            margin-bottom: 15px;
+        }
+        .explanation-box {
+            margin: 15px 0;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #6c757d;
+            border-radius: 4px;
+        }
+        .explanation-label {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .explanation-text {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .latency-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .latency-option {
+            padding: 12px 20px;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: white;
+            color: #3498db;
+        }
+        .latency-option:hover {
+            background-color: #3498db;
+            color: white;
+        }
+        .countdown {
+            color: #666;
+            font-size: 0.9em;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .cancel-advance {
+            padding: 3px 8px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        .cancel-advance:hover {
+            background-color: #5a6268;
+        }
+        .latency-select {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            font-size: 1em;
+            color: #2c3e50;
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .latency-select:hover {
+            border-color: #2980b9;
+        }
+        
+        .latency-select:focus {
+            outline: none;
+            border-color: #2980b9;
+            box-shadow: 0 0 5px rgba(41, 128, 185, 0.3);
+        }
+        
+        .latency-select option {
+            padding: 10px;
+               }
+        .project-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+        }
+        .info-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .info-field {
+            flex: 1;
+        }
+        .info-field label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .info-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            font-size: 1em;
+            color: #2c3e50;
+            transition: all 0.3s ease;
+        }
+        .info-input:focus {
+            outline: none;
+            border-color: #2980b9;
+            box-shadow: 0 0 5px rgba(41, 128, 185, 0.3);
+        }
+        .info-input::placeholder {
+            color: #95a5a6;
+        }
+        .summary-nav {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .summary-nav-button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        .summary-nav-button.previous {
+            background-color: #6c757d;
+            color: white;
+        }
+        .summary-nav-button.previous:hover {
+            background-color: #5a6268;
+        }
+        .summary-nav-button.start-over {
+            background-color: #dc3545;
+            color: white;
+        }
+        .summary-nav-button.start-over:hover {
+            background-color: #c82333;
+        }
+        .error-message {
+            color: #dc3545;
+            font-size: 0.8em;
+            margin-top: 5px;
+            display: none;
+        }
+        .info-input.error {
+            border-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" role="main">
+        <h1>SQL Server<br>Multi-Tenant Assessment</h1>
+        
+        <!-- Project Information -->
+        <div class="project-info" role="form">
+            <div class="info-row">
+                <div class="info-field">
+                    <label for="projectId">Project ID:</label>
+                    <input type="text" id="projectId" class="info-input" placeholder="Enter Project ID" required
+                           aria-label="Project ID" aria-required="true">
+                    <div class="error-message" id="projectIdError" role="alert"></div>
+                </div>
+                <div class="info-field">
+                    <label for="application">Application:</label>
+                    <input type="text" id="application" class="info-input" placeholder="Enter Application Name" required
+                           aria-label="Application Name" aria-required="true">
+                    <div class="error-message" id="applicationError" role="alert"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Category Headers -->
+        <div id="architecture-category" class="category-section" role="region" aria-label="Architecture Requirements">
+            <div class="category-header">Architecture Requirements</div>
+            <div class="category-description">
+                Questions about the application's architectural design and deployment requirements.
+            </div>
+        </div>
+        
+        <div id="storage-category" class="category-section" role="region" aria-label="Storage Requirements">
+            <div class="category-header">Storage Requirements</div>
+            <div class="category-description">
+                Questions about database size, naming conventions, and storage-related configurations.
+            </div>
+        </div>
+
+        <div id="network-category" class="category-section" role="region" aria-label="Network & Performance Requirements">
+            <div class="category-header">Network & Performance Requirements</div>
+            <div class="category-description">
+                Questions about network latency, database interaction frequency, and performance requirements.
+            </div>
+        </div>
+
+        <div id="configuration-category" class="category-section" role="region" aria-label="Configuration Requirements">
+            <div class="category-header">Configuration Requirements</div>
+            <div class="category-description">
+                Questions about system configuration and environmental requirements.
+            </div>
+        </div>
+
+        <!-- Architecture Question 1 (formerly Q1) -->
+        <div id="question1" class="question-container" role="region" aria-label="Question 1">
+            <div class="question-number">Question 1 of 7</div>
+            <div class="question-category">Architecture Requirements</div>
+            <div class="question">
+                Is this an all-in-one (AIO) application, with the application and the database required to be on the same instance?
+            </div>
+            <div class="explanation-box">
+                <div class="explanation-label">Explanation:</div>
+                <div class="explanation-text">None</div>
+            </div>
+            <div class="options" role="radiogroup" aria-label="Answer options for question 1">
+                <div class="option yes" onclick="handleAnswer(1, true)" role="radio" aria-checked="false" tabindex="0">Yes</div>
+                <div class="option no" onclick="handleAnswer(1, false)" role="radio" aria-checked="false" tabindex="0">No</div>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton1" class="nav-button" onclick="showPreviousQuestion()" aria-label="Previous question">Previous</button>
+                    <button id="nextButton1" class="nav-button" onclick="showNextQuestion()" aria-label="Next question">Next</button>
+                    <button id="showSummaryButton1" class="nav-button" onclick="showSummary()" aria-label="Show assessment summary">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Architecture Question 2 (formerly Q3) -->
+        <div id="question2" class="question-container hidden">
+            <div class="question-number">Question 2 of 7</div>
+            <div class="question-category">Architecture Requirements</div>
+            <div class="question">
+                Is this a vendor install of SQL Server that is unable to be uncoupled from their install package?
+            </div>
+            <div class="explanation-box">
+                <div class="explanation-label">Explanation:</div>
+                <div class="explanation-text">None</div>
+            </div>
+            <div class="options" role="radiogroup" aria-label="Answer options for question 2">
+                <div class="option yes" onclick="handleAnswer(2, true)">Yes</div>
+                <div class="option no" onclick="handleAnswer(2, false)">No</div>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton2" class="nav-button" onclick="showPreviousQuestion()">Previous</button>
+                    <button id="nextButton2" class="nav-button" onclick="showNextQuestion()">Next</button>
+                    <button id="showSummaryButton2" class="nav-button" onclick="showSummary()">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage Question 3 (formerly Q2) -->
+        <div id="question3" class="question-container hidden">
+            <div class="question-number">Question 3 of 7</div>
+            <div class="question-category">Storage Requirements</div>
+            <div class="question">
+                Will the total size of the database(s) exceed 100GB in the next 3-5 years?
+            </div>
+            <div class="explanation-box">
+                <div class="explanation-label">Explanation:</div>
+                <div class="explanation-text">None</div>
+            </div>
+            <div class="options" role="radiogroup" aria-label="Answer options for question 3">
+                <div class="option yes" onclick="handleAnswer(3, true)">Yes</div>
+                <div class="option no" onclick="handleAnswer(3, false)">No</div>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton3" class="nav-button" onclick="showPreviousQuestion()">Previous</button>
+                    <button id="nextButton3" class="nav-button" onclick="showNextQuestion()">Next</button>
+                    <button id="showSummaryButton3" class="nav-button" onclick="showSummary()">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage Question 4 (formerly Q4) -->
+        <div id="question4" class="question-container hidden">
+            <div class="question-number">Question 4 of 7</div>
+            <div class="question-category">Storage Requirements</div>
+            <div class="question">
+                Can the database(s) be renamed from the default name(s)?
+            </div>
+            <div class="explanation-box">
+                <div class="explanation-label">Explanation:</div>
+                <div class="explanation-text">In order to avoid duplicate database names on the multi-tenant instance, or to help identify/distinguish the database.</div>
+            </div>
+            <div class="options" role="radiogroup" aria-label="Answer options for question 4">
+                <div class="option yes" onclick="handleAnswer(4, true)">Yes</div>
+                <div class="option no" onclick="handleAnswer(4, false)">No</div>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton4" class="nav-button" onclick="showPreviousQuestion()">Previous</button>
+                    <button id="nextButton4" class="nav-button" onclick="showNextQuestion()">Next</button>
+                    <button id="showSummaryButton4" class="nav-button" onclick="showSummary()">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Question 5 (formerly Q6) -->
+        <div id="question5" class="question-container hidden">
+            <div class="question-number">Question 5 of 7</div>
+            <div class="question-category">Network & Performance Requirements</div>
+            <div class="question">
+                What is the required network latency?
+            </div>
+            <div class="explanation-box">
+                <div class="explanation-label">Explanation:</div>
+                <div class="explanation-text">Defines the maximum acceptable delay in communication between the application and the database server. Lower latency requirements may necessitate dedicated resources or optimized network configurations, impacting the feasibility of a multi-tenant environment.</div>
+            </div>
+            <div class="options">
+                <select id="latencySelect" class="latency-select" onchange="handleLatencyAnswer(this.value)" aria-label="Select latency requirement">
+                    <option value="">Select latency requirement...</option>
+                    <option value="unknown">Unknown</option>
+                    <option value="very-low">1-10 ms (Very Low)</option>
+                    <option value="low">10-50ms (Low)</option>
+                    <option value="moderate">50-100ms (Moderate)</option>
+                    <option value="high">100-500ms (High)</option>
+                    <option value="very-high">>500ms (Very High)</option>
+                </select>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton5" class="nav-button" onclick="showPreviousQuestion()">Previous</button>
+                    <button id="nextButton5" class="nav-button" onclick="showNextQuestion()">Next</button>
+                    <button id="showSummaryButton5" class="nav-button" onclick="showSummary()">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Question 6 (formerly Q7) -->
+        <div id="question6" class="question-container hidden">
+            <div class="question-number">Question 6 of 7</div>
+            <div class="question-category">Network & Performance Requirements</div>
+            <div class="question">
+                How "chatty" is the application?
+            </div>
+            <div class="question-info">
+                Measures the volume and frequency of database interactions. A highly chatty application sends frequent queries or transactions to the database server, which can impact performance, resource allocation, and suitability for a multi-tenant environment.
+            </div>
+            <div class="options" role="radiogroup" aria-label="Answer options for question 7">
+                <select id="chattinessSelect" class="latency-select" onchange="handleChattinessAnswer(this.value)" aria-label="Select application chattiness level">
+                    <option value="">Select application chattiness level...</option>
+                    <option value="low">Low (Infrequent database calls)</option>
+                    <option value="moderate">Moderate (Regular database interactions)</option>
+                    <option value="high">High (Very frequent database calls)</option>
+                </select>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton6" class="nav-button" onclick="showPreviousQuestion()">Previous</button>
+                    <button id="nextButton6" class="nav-button" onclick="showNextQuestion()">Next</button>
+                    <button id="showSummaryButton6" class="nav-button" onclick="showSummary()">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Question 7 (formerly Q5) -->
+        <div id="question7" class="question-container hidden">
+            <div class="question-number">Question 7 of 7</div>
+            <div class="question-category">Configuration Requirements</div>
+            <div class="question">
+                Can the database server be in a different time zone than the app server?
+            </div>
+            <div class="explanation-box">
+                <div class="explanation-label">Explanation:</div>
+                <div class="explanation-text">None</div>
+            </div>
+            <div class="options" role="radiogroup" aria-label="Answer options for question 7">
+                <div class="option yes" onclick="handleAnswer(7, true)">Yes</div>
+                <div class="option no" onclick="handleAnswer(7, false)">No</div>
+                <div class="nav-buttons-inline">
+                    <button id="prevButton7" class="nav-button" onclick="showPreviousQuestion()">Previous</button>
+                    <button id="nextButton7" class="nav-button" onclick="showNextQuestion()">Next</button>
+                    <button id="showSummaryButton7" class="nav-button" onclick="showSummary()">Show Summary</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Section -->
+        <div id="summary" class="summary-section">
+            <div class="summary-title">Assessment Summary</div>
+            <div class="summary-tabs">
+                <button class="summary-tab active" onclick="switchSummaryView('detailed')">Detailed View</button>
+                <button class="summary-tab" onclick="switchSummaryView('table')">Table View</button>
+            </div>
+            <div id="detailed-view" class="summary-view active">
+                <div id="summary-content"></div>
+            </div>
+            <div id="table-view" class="summary-view">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Question</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-table-content"></tbody>
+                </table>
+            </div>
+            <div id="final-result" class="final-result"></div>
+            <div class="summary-nav">
+                <button class="summary-nav-button previous" onclick="showPreviousFromSummary()">Previous</button>
+                <button class="summary-nav-button start-over" onclick="startOver()">Start Over</button>
+            </div>
+        </div>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        let currentQuestion = 1;
+        const totalQuestions = 7;
+        const answers = {};
+        
+        // Define which category each question belongs to
+        const questionToCategory = {
+            1: 'architecture',
+            2: 'architecture',
+            3: 'storage',
+            4: 'storage',
+            5: 'network',
+            6: 'network',
+            7: 'configuration'
+        };
+
+        function updateCategoryVisibility(questionNumber) {
+            // Hide all category sections
+            document.querySelectorAll('.category-section').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Show the category for the current question
+            const category = questionToCategory[questionNumber];
+            document.getElementById(`${category}-category`).style.display = 'block';
+        }
+
+        function showQuestion(questionNumber) {
+            // Hide summary if showing questions again
+            document.getElementById('summary').style.display = 'none';
+            
+            // Update category visibility
+            updateCategoryVisibility(questionNumber);
+            
+            // Hide all questions
+            for (let i = 1; i <= totalQuestions; i++) {
+                document.getElementById(`question${i}`).classList.add('hidden');
+            }
+            // Show current question
+            document.getElementById(`question${questionNumber}`).classList.remove('hidden');
+            
+            // Restore selected state if there's an answer for this question
+            if (answers[questionNumber] !== undefined) {
+                const currentQuestionDiv = document.getElementById(`question${questionNumber}`);
+                if (questionNumber === 6) {
+                    // Restore chattiness dropdown value
+                    const chattinessSelect = document.getElementById('chattinessSelect');
+                    if (chattinessSelect) {
+                        chattinessSelect.value = answers[questionNumber].level;
+                    }
+                } else {
+                    const selectedOption = currentQuestionDiv.querySelector(`.option.${answers[questionNumber] ? 'yes' : 'no'}`);
+                    if (selectedOption) {
+                        selectedOption.classList.add('selected');
+                    }
+                }
+            }
+            
+            // Force show Previous button for all questions except Question 1
+            const prevButton = document.getElementById(`prevButton${questionNumber}`);
+            if (prevButton && questionNumber > 1) {
+                prevButton.style.display = 'block';
+            }
+            
+            // Show Next button if there's an answer for this question
+            const nextButton = document.getElementById(`nextButton${questionNumber}`);
+            if (nextButton && answers[questionNumber] !== undefined) {
+                nextButton.style.display = 'block';
+            }
+            
+            // Update navigation buttons
+            updateNavigationButtons();
+        }
+
+        function updateNavigationButtons() {
+            // Check for any Category 1 disqualifying answers
+            const isDisqualified = answers[1] === true || answers[2] === true || 
+                                 (answers[5] && answers[5].isDisqualifying);
+            
+            // Update navigation buttons for all questions
+            for (let i = 1; i <= totalQuestions; i++) {
+                const prevButton = document.getElementById(`prevButton${i}`);
+                const nextButton = document.getElementById(`nextButton${i}`);
+                const showSummaryButton = document.getElementById(`showSummaryButton${i}`);
+                
+                if (isDisqualified) {
+                    prevButton.style.display = 'none';
+                    nextButton.style.display = 'none';
+                    showSummaryButton.style.display = 'block';
+                } else {
+                    // Show Previous button on all questions except Question 1
+                    prevButton.style.display = i === 1 ? 'none' : 'block';
+                    
+                    // Show Next button if there's an answer for the current question
+                    nextButton.style.display = answers[i] !== undefined ? 'block' : 'none';
+                    
+                    // Show summary button if all questions are answered
+                    const allAnswered = Object.keys(answers).length === totalQuestions;
+                    showSummaryButton.style.display = allAnswered ? 'block' : 'none';
+                }
+            }
+        }
+
+        function showPreviousQuestion() {
+            if (currentQuestion > 1) {
+                try {
+                    currentQuestion--;
+                    showQuestion(currentQuestion);
+                } catch (error) {
+                    console.error('Error navigating to previous question:', error);
+                    // Fallback to first question if navigation fails
+                    currentQuestion = 1;
+                    showQuestion(1);
+                }
+            }
+        }
+
+        function showNextQuestion() {
+            if (currentQuestion === 1 && !validateProjectInfo()) {
+                return; // Don't proceed if validation fails
+            }
+            if (currentQuestion < totalQuestions) {
+                try {
+                    currentQuestion++;
+                    showQuestion(currentQuestion);
+                } catch (error) {
+                    console.error('Error navigating to next question:', error);
+                    // Stay on current question if navigation fails
+                    showQuestion(currentQuestion);
+                }
+            }
+        }
+
+        function showSummary() {
+            // Hide all questions and the result div
+            for (let i = 1; i <= totalQuestions; i++) {
+                document.getElementById(`question${i}`).classList.add('hidden');
+            }
+            document.getElementById('result').style.display = 'none';
+            
+            // Hide all category sections
+            document.querySelectorAll('.category-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show summary section
+            const summaryDiv = document.getElementById('summary');
+            const summaryContent = document.getElementById('summary-content');
+            const finalResult = document.getElementById('final-result');
+            const tableContent = document.getElementById('summary-table-content');
+            
+            let summaryHTML = '';
+            let tableHTML = '';
+            let isEligible = true;
+            let hasWarnings = false;
+            
+            // Generate summary in numerical order
+            for (let i = 1; i <= totalQuestions; i++) {
+                if (i === 1) {
+                    // Question 1 - AIO
+                    const q1Class = answers[1] ? 'danger' : 'success';
+                    summaryHTML += `
+                        <div class="summary-item ${q1Class}">
+                            <strong>Question 1 - Is this an all-in-one (AIO) application?</strong><br>
+                            ${answers[1] ? '❌ IMMEDIATE DISQUALIFICATION - All In One Required' : '✅ Application architecture supports separate database instance'}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>1</td>
+                            <td>Is this an all-in-one (AIO) application?</td>
+                            <td>${answers[1] ? '❌' : '✅'}</td>
+                            <td>${answers[1] ? 'All In One Required' : 'Application architecture supports separate database instance'}</td>
+                        </tr>
+                    `;
+                    if (answers[1]) {
+                        isEligible = false;
+                    }
+                } else if (i === 2) {
+                    // Question 2 - Vendor Install
+                    const q2Class = answers[2] !== undefined ? (answers[2] ? 'danger' : 'success') : '';
+                    summaryHTML += `
+                        <div class="summary-item ${q2Class}">
+                            <strong>Question 2 - Is SQL Server tied to vendor installation?</strong><br>
+                            ${answers[2] !== undefined ? 
+                                (answers[2] ? '❌ IMMEDIATE DISQUALIFICATION - Vendor-locked SQL Server installation' : '✅ Standard SQL Server installation') :
+                                'Unanswered'}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>2</td>
+                            <td>Is SQL Server tied to vendor installation?</td>
+                            <td>${answers[2] !== undefined ? (answers[2] ? '❌' : '✅') : '-'}</td>
+                            <td>${answers[2] !== undefined ? 
+                                (answers[2] ? 'Vendor-locked SQL Server installation' : 'Standard SQL Server installation') :
+                                'Unanswered'}</td>
+                        </tr>
+                    `;
+                    if (answers[2]) {
+                        isEligible = false;
+                    }
+                } else if (i === 3) {
+                    // Question 3 - Disk Usage
+                    const q3Class = answers[3] !== undefined ? (answers[3] ? 'warning' : 'success') : '';
+                    summaryHTML += `
+                        <div class="summary-item ${q3Class}">
+                            <strong>Question 3 - Will database size exceed 100GB?</strong><br>
+                            ${answers[3] !== undefined ? 
+                                (answers[3] ? '⚠️ Large database size (>100GB) - requires evaluation' : '✅ Database size is within acceptable limits') :
+                                'Unanswered'}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>3</td>
+                            <td>Will database size exceed 100GB?</td>
+                            <td>${answers[3] !== undefined ? (answers[3] ? '⚠️' : '✅') : '-'}</td>
+                            <td>${answers[3] !== undefined ? 
+                                (answers[3] ? 'Large database size (>100GB) - requires evaluation' : 'Database size is within acceptable limits') :
+                                'Unanswered'}</td>
+                        </tr>
+                    `;
+                    if (answers[3]) hasWarnings = true;
+                } else if (i === 4) {
+                    // Question 4 - Database Renaming
+                    const q4Class = answers[4] !== undefined ? (answers[4] ? 'success' : 'warning') : '';
+                    summaryHTML += `
+                        <div class="summary-item ${q4Class}">
+                            <strong>Question 4 - Can databases be renamed?</strong><br>
+                            ${answers[4] !== undefined ? 
+                                (answers[4] ? '✅ Database can be renamed as needed' : '⚠️ Database naming restrictions present - requires evaluation') :
+                                'Unanswered'}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>4</td>
+                            <td>Can databases be renamed?</td>
+                            <td>${answers[4] !== undefined ? (answers[4] ? '✅' : '⚠️') : '-'}</td>
+                            <td>${answers[4] !== undefined ? 
+                                (answers[4] ? 'Database can be renamed as needed' : 'Database naming restrictions present - requires evaluation') :
+                                'Unanswered'}</td>
+                        </tr>
+                    `;
+                    if (answers[4] === false) hasWarnings = true;
+                } else if (i === 5) {
+                    // Question 5 - Latency
+                    const latencyClass = answers[5] ? 
+                        (answers[5].isDisqualifying ? 'danger' : 
+                        (answers[5].level === 'unknown' || answers[5].level === 'low' ? 'warning' : 'success')) : '';
+                    let latencyMessage = 'Unanswered';
+                    let latencyDetails = 'Unanswered';
+                    
+                    if (answers[5]) {
+                        switch(answers[5].level) {
+                            case 'very-low':
+                                latencyMessage = '❌ IMMEDIATE DISQUALIFICATION - Requires very low latency (1-10ms)';
+                                latencyDetails = 'Requires very low latency (1-10ms)';
+                                break;
+                            case 'unknown':
+                                latencyMessage = '⚠️ Latency requirements need to be determined';
+                                latencyDetails = 'Latency requirements need to be determined';
+                                break;
+                            case 'low':
+                                latencyMessage = '⚠️ Low latency requirements (10-50ms) - requires evaluation';
+                                latencyDetails = 'Low latency requirements (10-50ms) - requires evaluation';
+                                break;
+                            case 'moderate':
+                                latencyMessage = '✅ Moderate latency requirements (50-100ms) - acceptable';
+                                latencyDetails = 'Moderate latency requirements (50-100ms)';
+                                break;
+                            case 'high':
+                                latencyMessage = '✅ High latency requirements (100-500ms) - acceptable';
+                                latencyDetails = 'High latency requirements (100-500ms)';
+                                break;
+                            case 'very-high':
+                                latencyMessage = '✅ Very high latency requirements (>500ms) - acceptable';
+                                latencyDetails = 'Very high latency requirements (>500ms)';
+                                break;
+                        }
+                    }
+
+                    summaryHTML += `
+                        <div class="summary-item ${latencyClass}">
+                            <strong>Question 5 - Required network latency?</strong><br>
+                            ${latencyMessage}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>5</td>
+                            <td>Required network latency?</td>
+                            <td>${answers[5] ? (answers[5].isDisqualifying ? '❌' : (answers[5].level === 'unknown' || answers[5].level === 'low' ? '⚠️' : '✅')) : '-'}</td>
+                            <td>${latencyDetails}</td>
+                        </tr>
+                    `;
+
+                    if (answers[5]) {
+                        if (answers[5].isDisqualifying) {
+                            isEligible = false;
+                        } else if (answers[5].level === 'unknown' || answers[5].level === 'low') {
+                            hasWarnings = true;
+                        }
+                    }
+                } else if (i === 6) {
+                    // Question 6 - Chattiness
+                    const chattinessClass = answers[6] ? (answers[6].level === 'high' ? 'warning' : 'success') : '';
+                    let chattinessMessage = 'Unanswered';
+                    let chattinessDetails = 'Unanswered';
+                    
+                    if (answers[6]) {
+                        switch(answers[6].level) {
+                            case 'low':
+                                chattinessMessage = '✅ Low database interaction frequency - well suited for multitenancy';
+                                chattinessDetails = 'Low database interaction frequency';
+                                break;
+                            case 'moderate':
+                                chattinessMessage = '✅ Moderate database interaction frequency - acceptable for multitenancy';
+                                chattinessDetails = 'Moderate database interaction frequency';
+                                break;
+                            case 'high':
+                                chattinessMessage = '⚠️ High database interaction frequency - requires detailed analysis';
+                                chattinessDetails = 'High database interaction frequency - requires detailed analysis';
+                                break;
+                        }
+                    }
+
+                    summaryHTML += `
+                        <div class="summary-item ${chattinessClass}">
+                            <strong>Question 6 - Application chattiness level?</strong><br>
+                            ${chattinessMessage}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>6</td>
+                            <td>Application chattiness level?</td>
+                            <td>${answers[6] ? (answers[6].level === 'high' ? '⚠️' : '✅') : '-'}</td>
+                            <td>${chattinessDetails}</td>
+                        </tr>
+                    `;
+
+                    if (answers[6] && answers[6].level === 'high') {
+                        hasWarnings = true;
+                    }
+                } else if (i === 7) {
+                    // Question 7 - Time Zone
+                    const q7Class = answers[7] !== undefined ? (answers[7] ? 'success' : 'warning') : '';
+                    summaryHTML += `
+                        <div class="summary-item ${q7Class}">
+                            <strong>Question 7 - Can database be in different time zone?</strong><br>
+                            ${answers[7] !== undefined ? 
+                                (answers[7] ? '✅ Flexible time zone configuration' : '⚠️ Specific time zone requirement - requires evaluation') :
+                                'Unanswered'}
+                        </div>
+                    `;
+                    tableHTML += `
+                        <tr>
+                            <td>7</td>
+                            <td>Can database be in different time zone?</td>
+                            <td>${answers[7] !== undefined ? (answers[7] ? '✅' : '⚠️') : '-'}</td>
+                            <td>${answers[7] !== undefined ? 
+                                (answers[7] ? 'Flexible time zone configuration' : 'Specific time zone requirement - requires evaluation') :
+                                'Unanswered'}</td>
+                        </tr>
+                    `;
+                    if (answers[7] === false) hasWarnings = true;
+                }
+            }
+            
+            summaryContent.innerHTML = summaryHTML;
+            tableContent.innerHTML = tableHTML;
+            
+            // Final eligibility verdict
+            if (!isEligible) {
+                finalResult.style.backgroundColor = '#f8d7da';
+                finalResult.style.color = '#721c24';
+                finalResult.innerHTML = 'FINAL VERDICT: Not Eligible for Multitenancy';
+                if (answers[1]) {
+                    finalResult.innerHTML += ' (Immediate Disqualification - AIO Application)';
+                } else if (answers[2]) {
+                    finalResult.innerHTML += ' (Immediate Disqualification - Vendor Lock)';
+                } else if (answers[5] && answers[5].isDisqualifying) {
+                    finalResult.innerHTML += ' (Immediate Disqualification - Latency Requirements)';
+                }
+            } else if (hasWarnings) {
+                finalResult.style.backgroundColor = '#fff3cd';
+                finalResult.style.color = '#856404';
+                finalResult.innerHTML = 'FINAL VERDICT: Further Evaluation Needed';
+            } else {
+                finalResult.style.backgroundColor = '#d4edda';
+                finalResult.style.color = '#155724';
+                finalResult.innerHTML = 'FINAL VERDICT: Eligible for Multitenancy';
+            }
+            
+            summaryDiv.style.display = 'block';
+            
+            // Update navigation
+            document.getElementById(`nextButton${currentQuestion}`).style.display = 'none';
+            document.getElementById(`showSummaryButton${currentQuestion}`).style.display = 'none';
+        }
+
+        function switchSummaryView(view) {
+            // Update tab buttons
+            document.querySelectorAll('.summary-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update views
+            document.querySelectorAll('.summary-view').forEach(v => {
+                v.classList.remove('active');
+            });
+            document.getElementById(`${view}-view`).classList.add('active');
+        }
+
+        function handleAnswer(questionNumber, answer) {
+            // Validate question number
+            if (questionNumber < 1 || questionNumber > totalQuestions) {
+                console.error('Invalid question number:', questionNumber);
+                return;
+            }
+
+            // Validate answer type
+            if (typeof answer !== 'boolean') {
+                console.error('Invalid answer type:', typeof answer);
+                return;
+            }
+
+            // Remove selected class from all options in the current question
+            const currentQuestionDiv = document.getElementById(`question${questionNumber}`);
+            if (!currentQuestionDiv) {
+                console.error('Question container not found:', questionNumber);
+                return;
+            }
+
+            currentQuestionDiv.querySelectorAll('.option').forEach(option => {
+                option.classList.remove('selected');
+            });
+
+            // Add selected class to the clicked option
+            const selectedOption = currentQuestionDiv.querySelector(`.option.${answer ? 'yes' : 'no'}`);
+            if (!selectedOption) {
+                console.error('Option not found for answer:', answer);
+                return;
+            }
+            selectedOption.classList.add('selected');
+
+            answers[questionNumber] = answer;
+            const resultDiv = document.getElementById('result');
+            if (!resultDiv) {
+                console.error('Result div not found');
+                return;
+            }
+            resultDiv.style.display = 'block';
+
+            if (questionNumber === 1 || questionNumber === 2) { // Category 1 questions
+                if (answer) {
+                    resultDiv.className = 'result not-eligible';
+                    let message = '';
+                    if (questionNumber === 1) {
+                        message = 'This database cannot be placed on a multitenant instance because it requires the application and database to be on the same instance.';
+                    } else if (questionNumber === 2) {
+                        message = 'This database cannot be placed on a multitenant instance because it is tied to a vendor-specific SQL Server installation.';
+                    }
+                    resultDiv.innerHTML = `
+                        <strong>IMMEDIATE DISQUALIFICATION</strong><br>
+                        ${message} No further assessment needed.
+                    `;
+                    document.getElementById(`showSummaryButton${questionNumber}`).style.display = 'block';
+                } else {
+                    resultDiv.className = 'result eligible';
+                    resultDiv.innerHTML = `
+                        <strong>Proceeding with Assessment</strong><br>
+                        Continuing with further evaluation questions.
+                    `;
+                    document.getElementById(`nextButton${questionNumber}`).style.display = 'block';
+                }
+            } else if (questionNumber === 3) { // Database size question
+                if (answer) {
+                    resultDiv.className = 'result warning';
+                    resultDiv.innerHTML = `
+                        <strong>Further Evaluation Needed</strong><br>
+                        The large database size (>100GB) will need to be evaluated for compatibility with available multitenant resources.
+                    `;
+                } else {
+                    resultDiv.className = 'result eligible';
+                    resultDiv.innerHTML = `
+                        <strong>Compatible with Multitenancy</strong><br>
+                        The database size is within acceptable limits for a multitenant environment.
+                    `;
+                }
+                document.getElementById(`nextButton${questionNumber}`).style.display = 'block';
+            } else if (questionNumber === 4) {
+                if (!answer) {
+                    resultDiv.className = 'result warning';
+                    resultDiv.innerHTML = `
+                        <strong>Further Evaluation Needed</strong><br>
+                        The database naming restrictions will need to be evaluated for compatibility with the multitenant environment.
+                    `;
+                } else {
+                    resultDiv.className = 'result eligible';
+                    resultDiv.innerHTML = `
+                        <strong>Compatible with Multitenancy</strong><br>
+                        The ability to rename the database(s) is good for avoiding naming conflicts in a multitenant environment.
+                    `;
+                }
+                document.getElementById(`nextButton${questionNumber}`).style.display = 'block';
+            } else if (questionNumber === 7) {
+                if (!answer) {
+                    resultDiv.className = 'result warning';
+                    resultDiv.innerHTML = `
+                        <strong>Further Evaluation Needed</strong><br>
+                        The time zone requirement needs to be evaluated against available multitenant instances.
+                    `;
+                } else {
+                    resultDiv.className = 'result eligible';
+                    resultDiv.innerHTML = `
+                        <strong>Compatible with Multitenancy</strong><br>
+                        Time zone flexibility allows for placement on any available multitenant instance.
+                    `;
+                }
+                document.getElementById(`showSummaryButton${questionNumber}`).style.display = 'block';
+            }
+            
+            updateNavigationButtons();
+        }
+
+        function handleLatencyAnswer(latencyLevel) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+
+            answers[5] = {
+                level: latencyLevel,
+                isDisqualifying: latencyLevel === 'very-low'
+            };
+
+            if (latencyLevel === 'very-low') {
+                resultDiv.className = 'result not-eligible';
+                resultDiv.innerHTML = `
+                    <strong>IMMEDIATE DISQUALIFICATION</strong><br>
+                    Very low latency requirement (1-10ms) is not compatible with a multitenant environment. 
+                    This application requires dedicated resources to maintain such low latency. No further assessment needed.
+                `;
+                document.getElementById('showSummaryButton5').style.display = 'block';
+            } else if (latencyLevel === 'low') {
+                resultDiv.className = 'result warning';
+                resultDiv.innerHTML = `
+                    <strong>Further Evaluation Needed</strong><br>
+                    Low latency requirements (10-50ms) may need additional analysis to ensure compatibility with multitenant environment capabilities.
+                `;
+                document.getElementById('nextButton5').style.display = 'block';
+            } else {
+                if (latencyLevel === 'unknown') {
+                    resultDiv.className = 'result warning';
+                    resultDiv.innerHTML = `
+                        <strong>Further Evaluation Needed</strong><br>
+                        Latency requirements need to be determined and evaluated against the multitenant environment capabilities.
+                    `;
+                } else {
+                    resultDiv.className = 'result eligible';
+                    resultDiv.innerHTML = `
+                        <strong>Compatible with Multitenancy</strong><br>
+                        The latency requirement is within acceptable range for a multitenant environment.
+                    `;
+                }
+                document.getElementById('nextButton5').style.display = 'block';
+            }
+            
+            updateNavigationButtons();
+        }
+
+        function handleChattinessAnswer(chattinessLevel) {
+            const resultDiv = document.getElementById('result');
+            
+            // Hide result if no selection
+            if (!chattinessLevel) {
+                resultDiv.style.display = 'none';
+                return;
+            }
+            
+            // Only proceed if a selection has been made
+            resultDiv.style.display = 'block';
+            answers[6] = {
+                level: chattinessLevel
+            };
+
+            if (chattinessLevel === 'high') {
+                resultDiv.className = 'result warning';
+                resultDiv.innerHTML = `
+                    <strong>Further Evaluation Needed</strong><br>
+                    High database interaction frequency may impact performance in a multitenant environment. Additional analysis of the specific interaction patterns and resource requirements is needed.
+                `;
+            } else {
+                resultDiv.className = 'result eligible';
+                resultDiv.innerHTML = `
+                    <strong>Compatible with Multitenancy</strong><br>
+                    ${chattinessLevel === 'moderate' ? 'Moderate' : 'Low'} database interaction frequency is acceptable for a multitenant environment.
+                `;
+            }
+            
+            // Show the Next button
+            document.getElementById('nextButton6').style.display = 'block';
+            updateNavigationButtons();
+        }
+
+        function startOver() {
+            // Reset all answers
+            for (let key in answers) {
+                delete answers[key];
+            }
+            
+            // Reset current question to 1
+            currentQuestion = 1;
+            
+            // Clear all selected options
+            document.querySelectorAll('.option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Reset dropdowns
+            document.getElementById('latencySelect').value = '';
+            document.getElementById('chattinessSelect').value = '';
+            
+            // Clear project info fields
+            document.getElementById('projectId').value = '';
+            document.getElementById('application').value = '';
+            
+            // Show first question
+            showQuestion(1);
+        }
+
+        function showPreviousFromSummary() {
+            // Return to the last question
+            currentQuestion = totalQuestions;
+            showQuestion(currentQuestion);
+            
+            // Force update navigation buttons to show Previous button
+            const prevButton = document.getElementById(`prevButton${currentQuestion}`);
+            if (prevButton) {
+                prevButton.style.display = 'block';
+            }
+        }
+
+        function validateProjectInfo() {
+            const projectId = document.getElementById('projectId');
+            const application = document.getElementById('application');
+            const projectIdError = document.getElementById('projectIdError');
+            const applicationError = document.getElementById('applicationError');
+            let isValid = true;
+
+            // Reset error states
+            projectId.classList.remove('error');
+            application.classList.remove('error');
+            projectIdError.style.display = 'none';
+            applicationError.style.display = 'none';
+
+            // Validate Project ID
+            if (!projectId.value.trim()) {
+                projectId.classList.add('error');
+                projectIdError.textContent = 'Project ID is required';
+                projectIdError.style.display = 'block';
+                isValid = false;
+            }
+
+            // Validate Application Name
+            if (!application.value.trim()) {
+                application.classList.add('error');
+                applicationError.textContent = 'Application name is required';
+                applicationError.style.display = 'block';
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        // Add input event listeners for real-time validation
+        document.getElementById('projectId').addEventListener('input', function() {
+            this.classList.remove('error');
+            document.getElementById('projectIdError').style.display = 'none';
+        });
+
+        document.getElementById('application').addEventListener('input', function() {
+            this.classList.remove('error');
+            document.getElementById('applicationError').style.display = 'none';
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') {
+                showPreviousQuestion();
+            } else if (event.key === 'ArrowRight') {
+                showNextQuestion();
+            } else if (event.key === 'Enter' || event.key === ' ') {
+                const activeElement = document.activeElement;
+                if (activeElement.classList.contains('option')) {
+                    const isYes = activeElement.classList.contains('yes');
+                    const questionNumber = parseInt(activeElement.closest('.question-container').id.replace('question', ''));
+                    handleAnswer(questionNumber, isYes);
+                }
+            }
+        });
+
+        // Update ARIA attributes when options are selected
+        function updateAriaAttributes(questionNumber, answer) {
+            const questionContainer = document.getElementById(`question${questionNumber}`);
+            const yesOption = questionContainer.querySelector('.option.yes');
+            const noOption = questionContainer.querySelector('.option.no');
+            
+            yesOption.setAttribute('aria-checked', answer === true);
+            noOption.setAttribute('aria-checked', answer === false);
+        }
+
+        // Modify handleAnswer to update ARIA attributes
+        const originalHandleAnswer = handleAnswer;
+        handleAnswer = function(questionNumber, answer) {
+            originalHandleAnswer(questionNumber, answer);
+            updateAriaAttributes(questionNumber, answer);
+        };
+
+        // Initialize the first question
+        showQuestion(1);
+    </script>
+</body>
+</html> 
